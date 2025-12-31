@@ -1,0 +1,8 @@
+[submodule "ros2_ws/src/ldrobot-lidar-ros2"]
+	path = ros2_ws/src/ldrobot-lidar-ros2
+	url = https://github.com/Myzhar/ldrobot-lidar-ros2.git
+	branch = humble
+[submodule "ros2_ws/src/nav2"]
+	path = ros2_ws/src/nav2
+	url = https://github.com/ros-navigation/navigation2.git
+	branch = humble
