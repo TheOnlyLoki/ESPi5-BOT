@@ -1,45 +1,46 @@
 #include <Arduino.h>
-#include <micro_ros_arduino.h>
-#include <rcl/rcl.h>
-#include <geometry_msgs/msg/twist.h>
 
-// ROS 2 Objects
-rcl_subscription_t subscriber;
-geometry_msgs__msg__Twist msg;
-rclc_executor_t executor;
-rclc_support_t support;
-rcl_allocator_t allocator;
-rcl_node_t node;
-
-// Callback: will be called, when Pi sends move
-void subscription_callback(const void * msvin) {
-  const geometry_msgs__msg__Twist * msg = (const geometry_msgs__msg__Twist *)msvin;
-  
-  // TODO: Calculation of PWM for VNH2SP30 motor driver
-  // msg->linear.x  = forward/backwards (m/s)
-  // msg->angular.z = rotation (rad/s)
-}
+const int ledPin = 32; 
+const int freq = 5000;
+const int ledChannel = 0; // Wir suchen uns Kanal 0 aus
+const int resolution = 8;
+const int MAX_SAFE_DUTY = 127; // Deine 50% Grenze
+int dutyCycle = 0;
 
 void setup() {
-  set_microros_transports();
-  delay(2000);
+  Serial.begin(115200);
 
-  allocator = rcl_get_default_allocator();
-  // Setup support & Node
-  rclc_support_init(&support, 0, NULL, &allocator);
-  rclc_node_init_default(&node, "esp32_motor_node", "", &support);
+  // 1. Den Kanal konfigurieren (Frequenz und Auflösung)
+  ledcSetup(ledChannel, freq, resolution);
 
-  // initialize subsciber for /cmd_vel 
-  rclc_subscription_init_default(
-    &subscriber, &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
-    "cmd_vel");
-
-  // Executor (handles incoming messages)
-  rclc_executor_init(&executor, &support.context, 1, &allocator);
-  rclc_executor_add_subscription(&executor, &subscriber, &msg, &subscription_callback, ON_NEW_DATA);
+  // 2. Den physikalischen Pin an diesen Kanal binden
+  ledcAttachPin(ledPin, ledChannel);
+  
+//   Serial.println("PWM Hardware v2.x bereit.");
 }
 
 void loop() {
-  rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));
+    if(Serial.available() > 0){
+        char key = Serial.read();
+        if(key == '+'){
+            dutyCycle+=25;
+        }
+        else if(key == '-'){
+            dutyCycle-=25;
+        }
+        if(dutyCycle > MAX_SAFE_DUTY){
+            dutyCycle = MAX_SAFE_DUTY;
+        }
+        else if(dutyCycle < 0){
+            dutyCycle = 0;
+        }
+
+
+        ledcWrite(ledChannel, dutyCycle); 
+    }
+  // Zum Testen am Multimeter:
+  // ledcWrite(ledChannel, 0);   // Sollte 0V zeigen
+  // delay(2000);
+  // ledcWrite(ledChannel, 127); // Sollte ca. 1,6V zeigen
+  // delay(2000);
 }
